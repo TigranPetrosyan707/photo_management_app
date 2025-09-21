@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'dart:io';
+import 'providers/photo_provider.dart';
 
 void main() {
   runApp(const PhotoManagementApp());
@@ -9,14 +12,17 @@ class PhotoManagementApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Photo Management',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+    return ChangeNotifierProvider(
+      create: (context) => PhotoProvider(),
+      child: MaterialApp(
+        title: 'Photo Management',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        ),
+        home: const PhotoGalleryScreen(),
+        debugShowCheckedModeBanner: false,
       ),
-      home: const PhotoGalleryScreen(),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -29,8 +35,6 @@ class PhotoGalleryScreen extends StatefulWidget {
 }
 
 class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
-  final List<String> _photos = []; // Will be replaced with proper photo model later
-
   void _showAddPhotoOptions() {
     showModalBottomSheet(
       context: context,
@@ -68,11 +72,40 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     );
   }
 
-  void _takePhoto() {
-    // TODO: Implement camera functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Camera functionality coming soon!')),
-    );
+  void _takePhoto() async {
+    final photoProvider = Provider.of<PhotoProvider>(context, listen: false);
+    
+    try {
+      final success = await photoProvider.takePhoto();
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Photo captured successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to capture photo'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _pickFromGallery() {
@@ -84,68 +117,90 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Photo Gallery'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        elevation: 0,
-      ),
-      body: _photos.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.photo_library_outlined,
-                    size: 100,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'No photos yet',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.grey,
+    return Consumer<PhotoProvider>(
+      builder: (context, photoProvider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Photo Gallery'),
+            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            elevation: 0,
+          ),
+          body: Stack(
+            children: [
+              photoProvider.photos.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.photo_library_outlined,
+                            size: 100,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No photos yet',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Tap the + button to add your first photo',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(8),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 4,
+                        mainAxisSpacing: 4,
+                      ),
+                      itemCount: photoProvider.photos.length,
+                      itemBuilder: (context, index) {
+                        final photo = photoProvider.photos[index];
+                        return Card(
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.file(
+                            File(photo.filePath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey[300],
+                                child: const Icon(
+                                  Icons.broken_image,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
+              if (photoProvider.isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.3),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Tap the + button to add your first photo',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 4,
-                mainAxisSpacing: 4,
-              ),
-              itemCount: _photos.length,
-              itemBuilder: (context, index) {
-                return Card(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.grey[300],
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.image, size: 40, color: Colors.grey),
-                    ),
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddPhotoOptions,
-        tooltip: 'Add Photo',
-        child: const Icon(Icons.add_a_photo),
-      ),
+                ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: photoProvider.isLoading ? null : _showAddPhotoOptions,
+            tooltip: 'Add Photo',
+            child: const Icon(Icons.add_a_photo),
+          ),
+        );
+      },
     );
   }
+
 }

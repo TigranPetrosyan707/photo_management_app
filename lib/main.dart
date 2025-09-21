@@ -2,11 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'providers/photo_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/fullscreen_photo_view.dart';
 import 'models/photo.dart';
 
 void main() {
-  runApp(const PhotoManagementApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => PhotoProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
+      child: const PhotoManagementApp(),
+    ),
+  );
 }
 
 class PhotoManagementApp extends StatelessWidget {
@@ -14,17 +23,29 @@ class PhotoManagementApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => PhotoProvider(),
-      child: MaterialApp(
-        title: 'Photo Management',
-      theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        ),
-        home: const PhotoGalleryScreen(),
-        debugShowCheckedModeBanner: false,
-      ),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Photo Management',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blue,
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.blue,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: themeProvider.themeMode,
+          home: const PhotoGalleryScreen(),
+          debugShowCheckedModeBanner: false,
+        );
+      },
     );
   }
 }
@@ -195,6 +216,19 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                           ),
                         ],
                       ),
+                    Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, child) {
+                        return IconButton(
+                          icon: Icon(themeProvider.isDarkMode 
+                              ? Icons.light_mode 
+                              : Icons.dark_mode),
+                          onPressed: themeProvider.toggleTheme,
+                          tooltip: themeProvider.isDarkMode 
+                              ? 'Switch to Light Mode' 
+                              : 'Switch to Dark Mode',
+                        );
+                      },
+                    ),
                   ],
           ),
           body: Stack(

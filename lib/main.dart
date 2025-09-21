@@ -25,9 +25,9 @@ class PhotoManagementApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
-        return MaterialApp(
-          title: 'Photo Management',
-          theme: ThemeData(
+    return MaterialApp(
+          title: 'PhotoGraphy',
+      theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(
               seedColor: Colors.blue,
               brightness: Brightness.light,
@@ -175,7 +175,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       appBar: AppBar(
             title: Text(photoProvider.isSelectionMode 
                 ? '${photoProvider.selectedCount} selected'
-                : 'Photo Gallery'),
+                : 'PhotoGraphy'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             elevation: 0,
             leading: photoProvider.isSelectionMode 
@@ -256,7 +256,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                             ),
                           ),
                           SizedBox(height: 8),
-                          Text(
+            Text(
                             'Tap the + button to add your first photo',
                             style: TextStyle(
                               fontSize: 16,

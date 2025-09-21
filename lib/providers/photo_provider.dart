@@ -7,10 +7,15 @@ class PhotoProvider extends ChangeNotifier {
   final CameraService _cameraService = CameraService();
   final List<Photo> _photos = [];
   bool _isLoading = false;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedPhotoIds = <String>{};
 
   List<Photo> get photos => List.unmodifiable(_photos);
   bool get isLoading => _isLoading;
+  bool get isSelectionMode => _isSelectionMode;
+  Set<String> get selectedPhotoIds => Set.unmodifiable(_selectedPhotoIds);
   int get photoCount => _photos.length;
+  int get selectedCount => _selectedPhotoIds.length;
 
   Future<bool> takePhoto() async {
     try {
@@ -83,6 +88,67 @@ class PhotoProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> deletePhoto(String photoId) async {
+    try {
+      final photoIndex = _photos.indexWhere((photo) => photo.id == photoId);
+      if (photoIndex == -1) return false;
+
+      final photo = _photos[photoIndex];
+      
+      final file = File(photo.filePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+
+      _photos.removeAt(photoIndex);
+      
+      _updatePhotoOrder();
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting photo: $e');
+      return false;
+    }
+  }
+
+  Future<int> deletePhotos(List<String> photoIds) async {
+    int deletedCount = 0;
+    
+    final photosToDelete = <int>[];
+    for (String photoId in photoIds) {
+      final index = _photos.indexWhere((photo) => photo.id == photoId);
+      if (index != -1) {
+        photosToDelete.add(index);
+      }
+    }
+    
+    photosToDelete.sort((a, b) => b.compareTo(a));
+    
+    for (int index in photosToDelete) {
+      try {
+        final photo = _photos[index];
+        
+        final file = File(photo.filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+        
+        _photos.removeAt(index);
+        deletedCount++;
+      } catch (e) {
+        debugPrint('Error deleting photo at index $index: $e');
+      }
+    }
+    
+    if (deletedCount > 0) {
+      _updatePhotoOrder();
+      notifyListeners();
+    }
+    
+    return deletedCount;
+  }
+
   void reorderPhotos(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) {
       newIndex -= 1;
@@ -118,8 +184,42 @@ class PhotoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleSelectionMode() {
+    _isSelectionMode = !_isSelectionMode;
+    if (!_isSelectionMode) {
+      _selectedPhotoIds.clear();
+    }
+    notifyListeners();
+  }
+
+  void togglePhotoSelection(String photoId) {
+    if (_selectedPhotoIds.contains(photoId)) {
+      _selectedPhotoIds.remove(photoId);
+    } else {
+      _selectedPhotoIds.add(photoId);
+    }
+    notifyListeners();
+  }
+
+  void selectAllPhotos() {
+    _selectedPhotoIds.clear();
+    _selectedPhotoIds.addAll(_photos.map((photo) => photo.id));
+    notifyListeners();
+  }
+
+  void clearSelection() {
+    _selectedPhotoIds.clear();
+    notifyListeners();
+  }
+
+  bool isPhotoSelected(String photoId) {
+    return _selectedPhotoIds.contains(photoId);
+  }
+
   void clearPhotos() {
     _photos.clear();
+    _selectedPhotoIds.clear();
+    _isSelectionMode = false;
     notifyListeners();
   }
 }

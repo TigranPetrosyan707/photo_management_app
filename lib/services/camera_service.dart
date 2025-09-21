@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -29,6 +30,34 @@ class CameraService {
     }
   }
 
+  Future<List<File>> pickFromGallery() async {
+    try {
+      await _checkStoragePermission();
+
+      final List<XFile> images = await _picker.pickMultiImage(
+        imageQuality: 85,
+        limit: 20,
+      );
+
+      if (images.isEmpty) return [];
+
+      List<File> savedFiles = [];
+      for (XFile image in images) {
+        try {
+          final savedFile = await _savePhotoToAppDirectory(image);
+          savedFiles.add(savedFile);
+        } catch (e) {
+          debugPrint('Error saving photo: $e');
+        }
+      }
+
+      return savedFiles;
+    } catch (e) {
+      debugPrint('Gallery picker error: $e');
+      throw Exception('Failed to pick photos from gallery: $e');
+    }
+  }
+
   Future<bool> _checkCameraPermission() async {
     final status = await Permission.camera.status;
     
@@ -47,6 +76,15 @@ class CameraService {
     }
 
     return false;
+  }
+
+  Future<bool> _checkStoragePermission() async {
+    try {
+      return true;
+    } catch (e) {
+      debugPrint('Permission error: $e');
+      return true;
+    }
   }
 
   Future<File> _savePhotoToAppDirectory(XFile image) async {

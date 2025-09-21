@@ -45,6 +45,43 @@ class PhotoProvider extends ChangeNotifier {
     }
   }
 
+  Future<int> pickFromGallery() async {
+    try {
+      _setLoading(true);
+
+      final imageFiles = await _cameraService.pickFromGallery();
+      if (imageFiles.isEmpty) {
+        _setLoading(false);
+        return 0;
+      }
+
+      int addedCount = 0;
+      final baseTimestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      for (File imageFile in imageFiles) {
+        final photo = Photo(
+          id: '${baseTimestamp}_${addedCount}',
+          filePath: imageFile.path,
+          fileName: imageFile.path.split('/').last,
+          dateCreated: DateTime.now(),
+          order: addedCount,
+        );
+
+        _photos.insert(addedCount, photo);
+        addedCount++;
+      }
+      
+      _updatePhotoOrder();
+
+      _setLoading(false);
+      notifyListeners();
+      return addedCount;
+    } catch (e) {
+      _setLoading(false);
+      debugPrint('Error picking photos from gallery: $e');
+      return 0;
+    }
+  }
 
   void reorderPhotos(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) {

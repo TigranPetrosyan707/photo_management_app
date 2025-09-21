@@ -108,11 +108,40 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
     }
   }
 
-  void _pickFromGallery() {
-    // TODO: Implement gallery picker functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Gallery picker functionality coming soon!')),
-    );
+  void _pickFromGallery() async {
+    final photoProvider = Provider.of<PhotoProvider>(context, listen: false);
+    
+    try {
+      final addedCount = await photoProvider.pickFromGallery();
+      if (addedCount > 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$addedCount photo${addedCount > 1 ? 's' : ''} added from gallery!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No photos selected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

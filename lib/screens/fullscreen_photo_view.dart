@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../models/photo.dart';
+import '../providers/photo_provider.dart';
 
 class FullscreenPhotoView extends StatefulWidget {
   final Photo photo;
@@ -96,6 +98,24 @@ class _FullscreenPhotoViewState extends State<FullscreenPhotoView> {
                 ),
               ),
             ),
+            
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 16,
+              right: 16,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
+                  onPressed: () => _showDeleteDialog(context),
+                ),
+              ),
+            ),
           
             Positioned(
               bottom: 0,
@@ -167,5 +187,40 @@ class _FullscreenPhotoViewState extends State<FullscreenPhotoView> {
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+  
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Delete Photo'),
+          content: const Text('Are you sure you want to delete this photo? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Go back to main screen
+                
+                final photoProvider = Provider.of<PhotoProvider>(context, listen: false);
+                await photoProvider.deletePhoto(widget.photo.id);
+                
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Photo deleted')),
+                  );
+                }
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

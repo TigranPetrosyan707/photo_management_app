@@ -150,9 +150,7 @@ class PhotoProvider extends ChangeNotifier {
   }
 
   void reorderPhotos(int oldIndex, int newIndex) {
-    if (oldIndex < newIndex) {
-      newIndex -= 1;
-    }
+    if (oldIndex == newIndex) return;
     
     final Photo photo = _photos.removeAt(oldIndex);
     _photos.insert(newIndex, photo);

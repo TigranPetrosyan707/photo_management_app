@@ -43,7 +43,6 @@ dependencies:
   permission_handler: ^11.3.1
   provider: ^6.1.2
   path: ^1.9.0
-  reorderables: ^0.6.0
 
 dev_dependencies:
   flutter_test:

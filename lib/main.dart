@@ -228,15 +228,16 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                         ],
                       ),
                     )
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(8),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 4,
-                        mainAxisSpacing: 4,
-                      ),
-                      itemCount: photoProvider.photos.length,
-                      itemBuilder: (context, index) {
+                  : photoProvider.isSelectionMode
+                      ? GridView.builder(
+                          padding: const EdgeInsets.all(8),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
+                          ),
+                          itemCount: photoProvider.photos.length,
+                          itemBuilder: (context, index) {
                         final photo = photoProvider.photos[index];
                         final heroTag = 'photo_${photo.id}';
                         final isSelected = photoProvider.isPhotoSelected(photo.id);
@@ -324,7 +325,94 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                           ),
                         );
                       },
-                    ),
+                    )
+                      : GridView.builder(
+                          padding: const EdgeInsets.all(8),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 3,
+                            crossAxisSpacing: 4,
+                            mainAxisSpacing: 4,
+                          ),
+                          itemCount: photoProvider.photos.length,
+                          itemBuilder: (context, index) {
+                            final photo = photoProvider.photos[index];
+                            final heroTag = 'photo_${photo.id}';
+                            
+                            return DragTarget<int>(
+                              onAccept: (draggedIndex) {
+                                if (draggedIndex != index) {
+                                  photoProvider.reorderPhotos(draggedIndex, index);
+                                }
+                              },
+                              builder: (context, candidateData, rejectedData) {
+                                return LongPressDraggable<int>(
+                                  data: index,
+                                  delay: const Duration(milliseconds: 500),
+                                  feedback: Material(
+                                    elevation: 8,
+                                    child: SizedBox(
+                                      width: 120,
+                                      height: 120,
+                                      child: Image.file(
+                                        File(photo.filePath),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  childWhenDragging: Card(
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Container(
+                                      color: Colors.grey.withOpacity(0.5),
+                                      child: const Icon(
+                                        Icons.drag_handle,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Card(
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Stack(
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => _openFullscreen(photo, heroTag),
+                                          child: Hero(
+                                            tag: heroTag,
+                                            child: Image.file(
+                                              File(photo.filePath),
+                                              fit: BoxFit.cover,
+                                              width: double.infinity,
+                                              height: double.infinity,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Container(
+                                                  color: Colors.grey[300],
+                                                  child: const Icon(
+                                                    Icons.broken_image,
+                                                    color: Colors.grey,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                        if (candidateData.isNotEmpty)
+                                          Container(
+                                            color: Colors.blue.withOpacity(0.3),
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.add,
+                                                color: Colors.white,
+                                                size: 32,
+                                              ),
+                                            ),
+            ),
+          ],
+        ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
               if (photoProvider.isLoading)
                 Container(
                   color: Colors.black.withOpacity(0.3),
@@ -333,8 +421,8 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                   ),
                 ),
             ],
-          ),
-          floatingActionButton: FloatingActionButton(
+      ),
+      floatingActionButton: FloatingActionButton(
             onPressed: photoProvider.isLoading ? null : _showAddPhotoOptions,
             tooltip: 'Add Photo',
             child: const Icon(Icons.add_a_photo),

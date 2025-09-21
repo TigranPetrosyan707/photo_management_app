@@ -233,7 +233,11 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
           ),
           body: Stack(
             children: [
-              photoProvider.photos.isEmpty
+              !photoProvider.isInitialized
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : photoProvider.photos.isEmpty
                   ? const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

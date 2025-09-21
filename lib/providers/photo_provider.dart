@@ -2,13 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/photo.dart';
 import '../services/camera_service.dart';
+import '../services/database_service.dart';
 
 class PhotoProvider extends ChangeNotifier {
   final CameraService _cameraService = CameraService();
+  final DatabaseService _databaseService = DatabaseService();
   final List<Photo> _photos = [];
   bool _isLoading = false;
   bool _isSelectionMode = false;
   final Set<String> _selectedPhotoIds = <String>{};
+  bool _isInitialized = false;
 
   List<Photo> get photos => List.unmodifiable(_photos);
   bool get isLoading => _isLoading;
@@ -16,6 +19,26 @@ class PhotoProvider extends ChangeNotifier {
   Set<String> get selectedPhotoIds => Set.unmodifiable(_selectedPhotoIds);
   int get photoCount => _photos.length;
   int get selectedCount => _selectedPhotoIds.length;
+  bool get isInitialized => _isInitialized;
+
+  PhotoProvider() {
+    _initializePhotos();
+  }
+
+  Future<void> _initializePhotos() async {
+    try {
+      _setLoading(true);
+      final photos = await _databaseService.getAllPhotos();
+      _photos.clear();
+      _photos.addAll(photos);
+      _isInitialized = true;
+      _setLoading(false);
+      notifyListeners();
+    } catch (e) {
+      _setLoading(false);
+      debugPrint('Error initializing photos: $e');
+    }
+  }
 
   Future<bool> takePhoto() async {
     try {
@@ -39,6 +62,9 @@ class PhotoProvider extends ChangeNotifier {
       _photos.insert(0, photo);
       
       _updatePhotoOrder();
+      
+      await _databaseService.insertPhoto(photo);
+      await _databaseService.updatePhotosOrder(_photos);
 
       _setLoading(false);
       notifyListeners();
@@ -77,6 +103,9 @@ class PhotoProvider extends ChangeNotifier {
       }
       
       _updatePhotoOrder();
+      
+      await _databaseService.insertPhotos(_photos.take(addedCount).toList());
+      await _databaseService.updatePhotosOrder(_photos);
 
       _setLoading(false);
       notifyListeners();
@@ -103,6 +132,9 @@ class PhotoProvider extends ChangeNotifier {
       _photos.removeAt(photoIndex);
       
       _updatePhotoOrder();
+      
+      await _databaseService.deletePhoto(photoId);
+      await _databaseService.updatePhotosOrder(_photos);
 
       notifyListeners();
       return true;
@@ -143,6 +175,10 @@ class PhotoProvider extends ChangeNotifier {
     
     if (deletedCount > 0) {
       _updatePhotoOrder();
+      
+      await _databaseService.deletePhotos(photoIds);
+      await _databaseService.updatePhotosOrder(_photos);
+      
       notifyListeners();
     }
     
@@ -156,6 +192,9 @@ class PhotoProvider extends ChangeNotifier {
     _photos.insert(newIndex, photo);
     
     _updatePhotoOrder();
+    
+    _databaseService.updatePhotosOrder(_photos);
+    
     notifyListeners();
   }
 
@@ -219,5 +258,9 @@ class PhotoProvider extends ChangeNotifier {
     _selectedPhotoIds.clear();
     _isSelectionMode = false;
     notifyListeners();
+  }
+  
+  Future<void> refreshPhotos() async {
+    await _initializePhotos();
   }
 }

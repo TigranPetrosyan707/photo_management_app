@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'providers/photo_provider.dart';
+import 'screens/fullscreen_photo_view.dart';
 
 void main() {
   runApp(const PhotoManagementApp());
@@ -195,20 +196,49 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                       itemCount: photoProvider.photos.length,
                       itemBuilder: (context, index) {
                         final photo = photoProvider.photos[index];
+                        final heroTag = 'photo_${photo.id}';
                         return Card(
                           clipBehavior: Clip.antiAlias,
-                          child: Image.file(
-                            File(photo.filePath),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[300],
-                                child: const Icon(
-                                  Icons.broken_image,
-                                  color: Colors.grey,
+                          child: GestureDetector(
+                            onTap: () async {
+                              await Navigator.of(context).push(
+                                PageRouteBuilder(
+                                  pageBuilder: (context, animation, secondaryAnimation) =>
+                                      FullscreenPhotoView(
+                                    photo: photo,
+                                    heroTag: heroTag,
+                                  ),
+                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: child,
+                                    );
+                                  },
+                                  transitionDuration: const Duration(milliseconds: 250),
+                                  reverseTransitionDuration: const Duration(milliseconds: 200),
                                 ),
                               );
+                              // Ensure UI is properly refreshed after returning
+                              if (mounted) {
+                                setState(() {});
+                              }
                             },
+                            child: Hero(
+                              tag: heroTag,
+                              child: Image.file(
+                                File(photo.filePath),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(
+                                      Icons.broken_image,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           ),
                         );
                       },
